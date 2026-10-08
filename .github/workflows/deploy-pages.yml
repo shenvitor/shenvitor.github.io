@@ -1,0 +1,64 @@
+name: Deploy website to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out website
+        uses: actions/checkout@v4
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Prepare site and stamp deployment date
+        run: |
+          mkdir -p _site
+          rsync -a --exclude='.git/' --exclude='.github/' --exclude='_site/' --exclude='README.md' ./ _site/
+          python3 - <<'PYTHON'
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          from pathlib import Path
+          import re
+
+          # Fixed into the deployment artifact; never uses a visitor's clock.
+          today = datetime.now(ZoneInfo("Europe/Berlin"))
+          months = ("January", "February", "March", "April", "May", "June",
+                    "July", "August", "September", "October", "November", "December")
+          en = f"Last updated: {months[today.month - 1]} {today.day}, {today.year}"
+          zh_date = f"{today.year} 年 {today.month} 月 {today.day} 日"
+          replacement = (
+              f'<span id="last-updated" data-en="{en}" '
+              f'data-hant="最後更新：{zh_date}" '
+              f'data-hans="最后更新：{zh_date}">{en}</span>'
+          )
+          page = Path("_site/index.html")
+          source = page.read_text(encoding="utf-8")
+          updated, count = re.subn(r'<span id="last-updated"[^>]*>[^<]*</span>', replacement, source)
+          if count != 1:
+              raise SystemExit(f"Expected one last-updated footer span; found {count}")
+          page.write_text(updated, encoding="utf-8")
+          Path("_site/.nojekyll").touch()
+          print(en)
+          PYTHON
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: Deploy site
+        id: deployment
+        uses: actions/deploy-pages@v4
