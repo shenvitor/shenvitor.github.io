@@ -38,15 +38,29 @@
         ';font-weight:' + footerStyle.fontWeight + ';line-height:1.3;}' +
         '#gcvc-for,#gcvc-by,br{display:none;}#gcvc-views{font:inherit;color:inherit;}'
     });
-    const reveal = () => {
-      if (target.childNodes.length) {
-        wrapper.hidden = false;
+    let bound = false;
+    const bindWidgetHandlers = () => {
+      if (bound) return;
+      const iframe = target.querySelector('iframe');
+      if (!iframe) return;
+      bound = true;
+      const timeoutId = setTimeout(cleanup, 5000);
+      function cleanup() {
+        iframe.removeEventListener('load', onLoad);
+        iframe.removeEventListener('error', cleanup);
         observer.disconnect();
+        clearTimeout(timeoutId);
       }
+      function onLoad() {
+        wrapper.hidden = false;
+        cleanup();
+      }
+      iframe.addEventListener('load', onLoad);
+      iframe.addEventListener('error', cleanup);
     };
-    const observer = new MutationObserver(reveal);
-    observer.observe(target, { childList: true });
-    reveal();
+    const observer = new MutationObserver(bindWidgetHandlers);
+    observer.observe(target, { childList: true, subtree: true });
+    bindWidgetHandlers();
   }
   // Window load waits for the existing async GoatCounter script to finish.
   if (document.readyState === 'complete') showVisitCount();
@@ -54,4 +68,3 @@
 })();
 </script>
 </body></html>
-
