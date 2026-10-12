@@ -11,26 +11,43 @@
 <script>const picker=document.getElementById('lang');function setLanguage(current){if(!['en','hant','hans'].includes(current))current='en';document.documentElement.lang={en:'en',hant:'zh-Hant',hans:'zh-Hans'}[current];document.querySelectorAll('[data-en]').forEach(el=>{el.textContent=el.dataset[current]});document.title={en:'Vitor Jose Shen | Particle Physics',hant:'沈偉棟 | 粒子物理',hans:'沈伟栋 | 粒子物理'}[current];picker.value=current;}picker.addEventListener('change',()=>setLanguage(picker.value));setLanguage('en');document.getElementById('year').textContent=new Date().getFullYear();</script>
 <script data-goatcounter="https://shenvitor.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 <script>
-// Fetch the public aggregate only; no dashboard credentials or API key.
+// Use GoatCounter's public TOTAL widget; tracking remains in the script above.
 (function () {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
-  fetch('https://shenvitor.goatcounter.com/counter/TOTAL.json', {
-    credentials: 'omit', signal: controller.signal
-  })
-    .then(response => {
-      if (!response.ok) throw new Error('Counter unavailable');
-      return response.json();
-    })
-    .then(data => {
-      if (typeof data.count !== 'string' && typeof data.count !== 'number') return;
-      const count = String(data.count).trim();
-      if (!count || !/\d/.test(count)) return;
-      document.getElementById('visit-count').textContent = count;
-      document.getElementById('visit-counter').hidden = false;
-    })
-    .catch(() => { /* Hide unavailable totals rather than displaying a false zero. */ })
-    .finally(() => clearTimeout(timeout));
+  function showVisitCount() {
+    if (!window.goatcounter || typeof window.goatcounter.visit_count !== 'function') return;
+    const target = document.getElementById('visit-count');
+    const wrapper = document.getElementById('visit-counter');
+    if (!target || !wrapper || target.querySelector('iframe')) return;
+    const footerStyle = getComputedStyle(target.parentElement);
+    // The widget is cross-origin: display its number inline instead of reading its DOM.
+    window.goatcounter.visit_count({
+      path: 'TOTAL',
+      append: '#visit-count',
+      type: 'html',
+      no_branding: true,
+      attr: {
+        title: 'Total site visits',
+        width: '70',
+        height: '20',
+        style: 'display:inline-block;width:7ch;height:1.3em;vertical-align:-0.25em;border:0;'
+      },
+      style: 'html,body{margin:0;padding:0;background:transparent;overflow:hidden;}' +
+        'div{box-sizing:border-box;width:100%;height:auto;margin:0;padding:0;border:0;' +
+        'background:transparent;text-align:right;color:' + footerStyle.color + ';' +
+        'font-family:' + footerStyle.fontFamily + ';font-size:' + footerStyle.fontSize +
+        ';font-weight:' + footerStyle.fontWeight + ';line-height:1.3;}' +
+        '#gcvc-for,#gcvc-by,br{display:none;}#gcvc-views{font:inherit;color:inherit;}'
+    });
+    const frame = target.querySelector('iframe');
+    if (frame) {
+      frame.addEventListener('load', function () {
+        wrapper.hidden = false;
+      }, { once: true });
+    }
+  }
+  // Window load waits for the existing async GoatCounter script to finish.
+  if (document.readyState === 'complete') showVisitCount();
+  else window.addEventListener('load', showVisitCount, { once: true });
 })();
 </script>
 </body></html>
