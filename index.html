@@ -38,12 +38,15 @@
         ';font-weight:' + footerStyle.fontWeight + ';line-height:1.3;}' +
         '#gcvc-for,#gcvc-by,br{display:none;}#gcvc-views{font:inherit;color:inherit;}'
     });
-    const frame = target.querySelector('iframe');
-    if (frame) {
-      frame.addEventListener('load', function () {
+    const reveal = () => {
+      if (target.childNodes.length) {
         wrapper.hidden = false;
-      }, { once: true });
-    }
+        observer.disconnect();
+      }
+    };
+    const observer = new MutationObserver(reveal);
+    observer.observe(target, { childList: true });
+    reveal();
   }
   // Window load waits for the existing async GoatCounter script to finish.
   if (document.readyState === 'complete') showVisitCount();
